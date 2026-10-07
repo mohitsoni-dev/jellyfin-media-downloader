@@ -139,6 +139,7 @@ def active_download_rows(torrents) -> list[dict]:
         rows.append(
             {
                 "name": torrent.name,
+                "hash": getattr(torrent, "hash_string", ""),
                 "status": status,
                 "progress": max(0, min(100, float(torrent.percent_done) * 100)),
                 "rate": format_download_rate(int(torrent.rate_download)),
@@ -354,6 +355,32 @@ def downloads_status(request: Request, connection=Depends(get_database)):
         return JSONResponse({"error": "Transmission is unavailable."}, status_code=503)
 
     response = JSONResponse({"downloads": downloads})
+    set_session_cookie(response, token)
+    return response
+
+
+@app.post("/downloads/{torrent_hash}/stop")
+def stop_download(
+    torrent_hash: str,
+    request: Request,
+    csrf_token: str = Form(),
+    connection=Depends(get_database),
+):
+    session, token = get_or_create_session(request, connection)
+    if not session["user_id"]:
+        response = JSONResponse({"error": "Authentication required."}, status_code=401)
+        set_session_cookie(response, token)
+        return response
+    verify_csrf(session, csrf_token)
+    if not re.fullmatch(r"(?:[a-fA-F0-9]{40}|[a-fA-F0-9]{64})", torrent_hash):
+        return JSONResponse({"error": "Invalid torrent identifier."}, status_code=400)
+
+    try:
+        create_transmission_client().stop_torrent(torrent_hash)
+    except TransmissionError:
+        return JSONResponse({"error": "Transmission could not stop this download."}, status_code=503)
+
+    response = JSONResponse({"stopped": True})
     set_session_cookie(response, token)
     return response
 

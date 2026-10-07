@@ -88,6 +88,7 @@ def test_downloads_status_api_requires_auth_and_returns_live_values(tmp_path, mo
     transmission.get_torrents.return_value = [
         SimpleNamespace(
             name="Live Series",
+            hash_string="a" * 40,
             status="downloading",
             percent_done=0.5,
             rate_download=2048,
@@ -112,12 +113,57 @@ def test_downloads_status_api_requires_auth_and_returns_live_values(tmp_path, mo
         assert response.json()["downloads"] == [
             {
                 "name": "Live Series",
+                "hash": "a" * 40,
                 "status": "downloading",
                 "progress": 50.0,
                 "rate": "2.0 KB/s",
                 "eta": "0 days 00:01:00",
             }
         ]
+
+
+def test_stop_download_requires_auth_csrf_and_valid_hash(tmp_path, monkeypatch):
+    monkeypatch.setattr(main, "DATABASE_PATH", tmp_path / "auth.db")
+    transmission = Mock()
+    transmission.get_torrents.return_value = []
+    monkeypatch.setattr(main, "create_transmission_client", lambda: transmission)
+    torrent_hash = "b" * 40
+    with TestClient(main.app) as client:
+        assert client.post(
+            f"/downloads/{torrent_hash}/stop", data={"csrf_token": "token"}
+        ).status_code == 401
+
+        register_page = client.get("/register")
+        client.post(
+            "/register",
+            data={
+                "email": "stop-download@example.com",
+                "password": "downloads-password",
+                "csrf_token": csrf_from(register_page),
+            },
+            follow_redirects=False,
+        )
+        page = client.get("/")
+        csrf_token = csrf_from(page)
+
+        invalid_hash = client.post(
+            "/downloads/not-a-hash/stop", data={"csrf_token": csrf_token}
+        )
+        assert invalid_hash.status_code == 400
+        transmission.stop_torrent.assert_not_called()
+
+        invalid_csrf = client.post(
+            f"/downloads/{torrent_hash}/stop", data={"csrf_token": "invalid"}
+        )
+        assert invalid_csrf.status_code == 403
+        transmission.stop_torrent.assert_not_called()
+
+        stopped = client.post(
+            f"/downloads/{torrent_hash}/stop", data={"csrf_token": csrf_token}
+        )
+        assert stopped.status_code == 200
+        assert stopped.json() == {"stopped": True}
+        transmission.stop_torrent.assert_called_once_with(torrent_hash)
 
 
 def test_registration_login_and_logout(tmp_path, monkeypatch):

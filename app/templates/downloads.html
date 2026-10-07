@@ -56,6 +56,22 @@ endblock %} {% block content %}
             <dd>{{ download.eta }}</dd>
           </div>
         </dl>
+        <div class="download-actions">
+          <button
+            class="stop-button"
+            type="button"
+            data-stop-hash="{{ download.hash }}"
+            {%
+            if
+            not
+            download.hash
+            %}disabled{%
+            endif
+            %}
+          >
+            Stop
+          </button>
+        </div>
       </article>
       {% endfor %}
     </div>
@@ -74,6 +90,7 @@ endblock %} {% block content %}
 <script>
   const downloadsContent = document.querySelector("#downloads-content");
   const downloadsUpdated = document.querySelector("#downloads-updated");
+  const downloadsCsrfToken = {{ csrf_token|tojson }};
 
   function downloadRow(download) {
     const row = document.createElement("article");
@@ -122,6 +139,16 @@ endblock %} {% block content %}
       stats.append(item);
     }
     row.append(main, stats);
+    const actions = document.createElement("div");
+    actions.className = "download-actions";
+    const stopButton = document.createElement("button");
+    stopButton.className = "stop-button";
+    stopButton.type = "button";
+    stopButton.textContent = "Stop";
+    stopButton.dataset.stopHash = download.hash;
+    stopButton.disabled = !download.hash;
+    actions.append(stopButton);
+    row.append(actions);
     return row;
   }
 
@@ -170,6 +197,34 @@ endblock %} {% block content %}
       downloadsUpdated.textContent = "Could not refresh downloads. Retrying…";
     }
   }
+
+  downloadsContent.addEventListener("click", async (event) => {
+    const button = event.target.closest("[data-stop-hash]");
+    if (!button || button.disabled) return;
+
+    button.disabled = true;
+    button.textContent = "Stopping…";
+    try {
+      const response = await fetch(
+        `/downloads/${encodeURIComponent(button.dataset.stopHash)}/stop`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ csrf_token: downloadsCsrfToken }),
+        },
+      );
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Could not stop this download.");
+      }
+      downloadsUpdated.textContent = "Download stopped.";
+      await refreshDownloads();
+    } catch (error) {
+      downloadsUpdated.textContent = error.message;
+      button.disabled = false;
+      button.textContent = "Stop";
+    }
+  });
 
   refreshDownloads();
   window.setInterval(refreshDownloads, 5000);
