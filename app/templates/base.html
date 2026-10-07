@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f4ec">
+  <title>{% block title %}Local Auth{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='/styles.css') }}">
+</head>
+<body>
+  <main class="shell">
+    <aside class="brand-panel">
+      <a class="wordmark" href="/" aria-label="Local Auth home"><span class="mark">L</span> local auth</a>
+      <div class="brand-copy">
+        <p class="eyebrow">A quieter corner of the internet</p>
+        <h1>Your space,<br>ready when<br>you are.</h1>
+        <p class="brand-note">A small, private place to begin.</p>
+      </div>
+      <div class="panel-foot"><span class="status-dot"></span> Private by design <span class="foot-rule"></span> Local storage</div>
+    </aside>
+    <section class="content-panel">
+      {% block content %}{% endblock %}
+      <footer class="content-foot">Built for this space <span>·</span> No third-party tracking</footer>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,61 @@
+{% extends "base.html" %} {% block title %}Your space · Local Auth{% endblock %}
+{% block content %}
+<div class="form-wrap signed-in">
+  <p class="eyebrow">Your space</p>
+  <h2>You’re signed in.</h2>
+  <p class="form-lead">A good place to start, {{ email }}.</p>
+  <div class="account-line">
+    <span class="status-dot"></span><span>Account active</span>
+  </div>
+  <a class="secondary-button add-link" href="/add">Add a magnet</a>
+  <a class="secondary-button add-link" href="/downloads">Active downloads</a>
+  <section class="settings-block" aria-labelledby="library-settings-title">
+    <div class="settings-heading">
+      <h3 id="library-settings-title">Shared library folders</h3>
+      <p>
+        Changes apply to every account. Enter the full Windows folders that
+        Transmission should download into.
+      </p>
+    </div>
+    {% if saved %}
+    <p class="save-confirmation" role="status">
+      Folder paths saved for all users.
+    </p>
+    {% endif %}
+    <form
+      method="post"
+      action="/settings/library"
+      class="auth-form settings-form"
+    >
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+      <label for="tv-shows-path">TV shows folder</label>
+      <input
+        id="tv-shows-path"
+        name="tv_shows_path"
+        type="text"
+        maxlength="1024"
+        value="{{ tv_shows_path }}"
+        placeholder="C:\Users\DELL\Desktop\media\Shows"
+        spellcheck="false"
+      />
+      <label for="movies-path">Movies folder</label>
+      <input
+        id="movies-path"
+        name="movies_path"
+        type="text"
+        maxlength="1024"
+        value="{{ movies_path }}"
+        placeholder="C:\Users\DELL\Desktop\media\Movies"
+        spellcheck="false"
+      />
+      <button class="primary-button" type="submit">
+        Save shared folders <span aria-hidden="true">→</span>
+      </button>
+    </form>
+  </section>
+  <form method="post" action="/logout">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+    <button class="secondary-button" type="submit">Sign out</button>
+  </form>
+</div>
+{% endblock %}

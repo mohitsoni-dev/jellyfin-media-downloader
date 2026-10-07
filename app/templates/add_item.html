@@ -1,0 +1,110 @@
+{% extends "base.html" %} {% block title %}Add magnet · Local Auth{% endblock %}
+{% block content %} {% set selected_type = media_type or 'series' %}
+<div class="form-wrap add-item-wrap">
+  <a class="back-link" href="/">← Dashboard</a>
+  <p class="eyebrow">New item</p>
+  <h2>Add a magnet</h2>
+  <p class="form-lead">
+    Send a magnet to Transmission and organize it for your library.
+  </p>
+  {% if started %}
+  <p class="save-confirmation" role="status">
+    Download started in the configured Jellyfin folder.
+  </p>
+  {% endif %} {% if error %}
+  <p class="notice" role="alert">{{ error }}</p>
+  {% endif %}
+  <form
+    method="post"
+    action="/add"
+    class="auth-form add-item-form"
+    data-selected-type="{{ media_type }}"
+    id="add-item-form"
+  >
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+    <label for="magnet-link">Magnet link</label>
+    <input
+      id="magnet-link"
+      name="magnet_link"
+      type="text"
+      maxlength="4096"
+      required
+      value="{{ magnet_link }}"
+      placeholder="magnet:?xt=urn:btih:…"
+      autocomplete="off"
+      spellcheck="false"
+    />
+
+    <fieldset class="type-fieldset">
+      <legend>Type</legend>
+      <div class="type-options">
+        <label class="type-option">
+          <input type="radio" name="media_type" value="series" checked />
+          <span>Series</span>
+        </label>
+        <label class="type-option">
+          <input type="radio" name="media_type" value="movie" />
+          <span>Movie</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <label for="item-name">Name</label>
+    <input
+      id="item-name"
+      name="name"
+      type="text"
+      maxlength="200"
+      required
+      value="{{ name }}"
+      placeholder="Name of the series or movie"
+    />
+
+    <div id="season-field">
+      <label for="season-number">Season number</label>
+      <input
+        id="season-number"
+        name="season_number"
+        type="number"
+        min="1"
+        max="999"
+        value="{{ season_number }}"
+        placeholder="1"
+      />
+    </div>
+
+    <button class="primary-button" type="submit">
+      Start download <span aria-hidden="true">→</span>
+    </button>
+  </form>
+  <p class="form-footnote">
+    Movie year is optional; add it to the name when known. Torrent filenames are
+    preserved.
+  </p>
+</div>
+<script>
+  const seasonField = document.querySelector("#season-field");
+  const seasonInput = document.querySelector("#season-number");
+  const typeChoices = document.querySelectorAll('input[name="media_type"]');
+  const addItemForm = document.querySelector("#add-item-form");
+
+  if (addItemForm.dataset.selectedType === "movie") {
+    document.querySelector('input[name="media_type"][value="movie"]').checked =
+      true;
+  }
+
+  function updateSeasonField() {
+    const isSeries =
+      document.querySelector('input[name="media_type"]:checked').value ===
+      "series";
+    seasonField.hidden = !isSeries;
+    seasonInput.disabled = !isSeries;
+    seasonInput.required = isSeries;
+  }
+
+  typeChoices.forEach((choice) =>
+    choice.addEventListener("change", updateSeasonField),
+  );
+  updateSeasonField();
+</script>
+{% endblock %}

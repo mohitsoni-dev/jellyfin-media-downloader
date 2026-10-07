@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Sign in · Local Auth{% endblock %}
+{% block content %}
+<div class="form-wrap">
+  <p class="eyebrow">Welcome back</p>
+  <h2>Sign in</h2>
+  <p class="form-lead">Pick up right where you left off.</p>
+  {% if error %}<p class="notice" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="/login" class="auth-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label for="email">Email address</label>
+    <input id="email" name="email" type="email" autocomplete="email" required maxlength="254" value="{{ email or '' }}" placeholder="you@example.com">
+    <div class="label-row"><label for="password">Password</label></div>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+    <button class="primary-button" type="submit">Sign in <span aria-hidden="true">→</span></button>
+  </form>
+  <p class="switch-copy">New here? <a href="/register">Create an account</a></p>
+</div>
+{% endblock %}

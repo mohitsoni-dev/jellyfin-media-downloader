@@ -1,0 +1,177 @@
+{% extends "base.html" %} {% block title %}Active downloads · Local Auth{%
+endblock %} {% block content %}
+<div class="downloads-wrap">
+  <header class="downloads-header">
+    <div>
+      <a class="back-link" href="/">← Dashboard</a>
+      <p class="eyebrow">Transmission</p>
+      <h2>Active downloads</h2>
+      <p class="form-lead">Live torrent activity.</p>
+    </div>
+    <a
+      class="secondary-button refresh-link"
+      href="/downloads"
+      aria-label="Refresh downloads"
+      title="Refresh downloads"
+      >↻</a
+    >
+  </header>
+
+  <p class="downloads-updated" id="downloads-updated" aria-live="polite">
+    {% if service_error %}{{ service_error }}{% else %}Updating…{% endif %}
+  </p>
+  <div id="downloads-content" aria-live="polite">
+    {% if downloads %}
+    <div class="download-list" aria-label="Active torrent downloads">
+      {% for download in downloads %}
+      <article class="download-row">
+        <div class="download-main">
+          <div class="download-title-line">
+            <h3>{{ download.name }}</h3>
+            <span class="download-status">{{ download.status }}</span>
+          </div>
+          <div class="progress-line">
+            <div
+              class="progress-track"
+              role="progressbar"
+              aria-label="{{ download.name }} progress"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="{{ '%.1f'|format(download.progress) }}"
+            >
+              <span style="width: {{ download.progress }}%"></span>
+            </div>
+            <span class="progress-value"
+              >{{ "%.1f"|format(download.progress) }}%</span
+            >
+          </div>
+        </div>
+        <dl class="download-stats">
+          <div>
+            <dt>Download</dt>
+            <dd>{{ download.rate }}</dd>
+          </div>
+          <div>
+            <dt>ETA</dt>
+            <dd>{{ download.eta }}</dd>
+          </div>
+        </dl>
+      </article>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="downloads-empty">
+      <span class="empty-mark" aria-hidden="true">↓</span>
+      <h3>No active downloads</h3>
+      <p>New magnet downloads will appear here while they are downloading.</p>
+      <a class="primary-button empty-action" href="/add"
+        >Add a magnet <span aria-hidden="true">→</span></a
+      >
+    </div>
+    {% endif %}
+  </div>
+</div>
+<script>
+  const downloadsContent = document.querySelector("#downloads-content");
+  const downloadsUpdated = document.querySelector("#downloads-updated");
+
+  function downloadRow(download) {
+    const row = document.createElement("article");
+    row.className = "download-row";
+    const main = document.createElement("div");
+    main.className = "download-main";
+    const titleLine = document.createElement("div");
+    titleLine.className = "download-title-line";
+    const title = document.createElement("h3");
+    title.textContent = download.name;
+    const status = document.createElement("span");
+    status.className = "download-status";
+    status.textContent = download.status;
+    titleLine.append(title, status);
+
+    const progressLine = document.createElement("div");
+    progressLine.className = "progress-line";
+    const track = document.createElement("div");
+    track.className = "progress-track";
+    track.setAttribute("role", "progressbar");
+    track.setAttribute("aria-label", `${download.name} progress`);
+    track.setAttribute("aria-valuemin", "0");
+    track.setAttribute("aria-valuemax", "100");
+    track.setAttribute("aria-valuenow", download.progress.toFixed(1));
+    const bar = document.createElement("span");
+    bar.style.width = `${download.progress}%`;
+    track.append(bar);
+    const percent = document.createElement("span");
+    percent.className = "progress-value";
+    percent.textContent = `${download.progress.toFixed(1)}%`;
+    progressLine.append(track, percent);
+    main.append(titleLine, progressLine);
+
+    const stats = document.createElement("dl");
+    stats.className = "download-stats";
+    for (const [label, value] of [
+      ["Download", download.rate],
+      ["ETA", download.eta],
+    ]) {
+      const item = document.createElement("div");
+      const term = document.createElement("dt");
+      term.textContent = label;
+      const detail = document.createElement("dd");
+      detail.textContent = value;
+      item.append(term, detail);
+      stats.append(item);
+    }
+    row.append(main, stats);
+    return row;
+  }
+
+  function renderDownloads(downloads) {
+    downloadsContent.replaceChildren();
+    if (downloads.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "downloads-empty";
+      const mark = document.createElement("span");
+      mark.className = "empty-mark";
+      mark.setAttribute("aria-hidden", "true");
+      mark.textContent = "↓";
+      const heading = document.createElement("h3");
+      heading.textContent = "No active downloads";
+      const message = document.createElement("p");
+      message.textContent =
+        "New magnet downloads will appear here while they are downloading.";
+      const addLink = document.createElement("a");
+      addLink.className = "primary-button empty-action";
+      addLink.href = "/add";
+      addLink.textContent = "Add a magnet →";
+      empty.append(mark, heading, message, addLink);
+      downloadsContent.append(empty);
+      return;
+    }
+
+    const list = document.createElement("div");
+    list.className = "download-list";
+    list.setAttribute("aria-label", "Active torrent downloads");
+    downloads.forEach((download) => list.append(downloadRow(download)));
+    downloadsContent.append(list);
+  }
+
+  async function refreshDownloads() {
+    try {
+      const response = await fetch("/api/downloads", { cache: "no-store" });
+      const result = await response.json();
+      if (!response.ok) {
+        downloadsUpdated.textContent =
+          result.error || "Could not refresh downloads.";
+        return;
+      }
+      renderDownloads(result.downloads);
+      downloadsUpdated.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+    } catch {
+      downloadsUpdated.textContent = "Could not refresh downloads. Retrying…";
+    }
+  }
+
+  refreshDownloads();
+  window.setInterval(refreshDownloads, 5000);
+</script>
+{% endblock %}

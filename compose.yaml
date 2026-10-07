@@ -1,0 +1,41 @@
+services:
+  auth:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    environment:
+      DATABASE_PATH: /data/app.db
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      TRANSMISSION_HOST: transmission
+      TRANSMISSION_PORT: "9091"
+      TRANSMISSION_USER: ${TRANSMISSION_USER:-local-auth}
+      TRANSMISSION_PASSWORD: ${TRANSMISSION_PASSWORD:?Set TRANSMISSION_PASSWORD in .env}
+    volumes:
+      - auth_data:/data
+      - type: bind
+        source: C:/Users/DELL/Desktop/media
+        target: /downloads
+    depends_on:
+      - transmission
+
+  transmission:
+    image: lscr.io/linuxserver/transmission:latest
+    restart: unless-stopped
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TZ:-Etc/UTC}
+      USER: ${TRANSMISSION_USER:-local-auth}
+      PASS: ${TRANSMISSION_PASSWORD:?Set TRANSMISSION_PASSWORD in .env}
+      WHITELIST: ""
+      HOST_WHITELIST: ""
+    volumes:
+      - transmission_config:/config
+      - type: bind
+        source: C:/Users/DELL/Desktop/media
+        target: /downloads
+
+volumes:
+  auth_data:
+  transmission_config:
